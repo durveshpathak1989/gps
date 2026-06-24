@@ -1,85 +1,38 @@
-# GPS Sensor Library
+# Test Quad GPS Library
 
-## Purpose
+`GPSSensor` parses NMEA sentences from a GY-GPS6MV2/u-blox NEO-6M style module over UART1.
 
-Reads NMEA sentences from a u-blox NEO-6M style GPS module and exposes fix, position, speed, course, satellite, and UTC data.
+## Pin Map
 
-## Files
+| GPS signal | ESP32 pin | Notes |
+| --- | ---: | --- |
+| TXD | GPIO 13 | GPS TXD into ESP32 UART1 RX |
+| RXD | GPIO 17 | Optional ESP32 UART1 TX to GPS RXD |
+| VCC | 3.3V | Many modules accept 3.3V-5V; match your board |
+| GND | GND | Common ground |
 
-- `GPSSensor.h/.cpp`: UART setup, sentence parsing, checksum validation, and GPS data model.
-
-## Quick Start
+## Main INO Integration Example
 
 ```cpp
 #include "GPSSensor.h"
 
-GPSSensor gps;
+#define PIN_GPS_RX 13
+#define PIN_GPS_TX 17
 
 void setup() {
-    gps.begin(13, 17, 9600);
+    gps.begin(PIN_GPS_RX, PIN_GPS_TX, 9600);
 }
 
 void loop() {
     gps.update();
-    GPSData fix = gps.get();
-    if (fix.valid) {
-        double lat = fix.latitude;
-        double lon = fix.longitude;
+    GPSData d = gps.get();
+    if (d.fix) {
+        // d.lat, d.lon, d.altitude_m, d.sats, d.hdop
     }
 }
 ```
 
-## How It Fits Into The Flight Controller
 
-This library lives under `Submodules/GPS` in the main `Test_Quad` firmware
-and is built as an Arduino library by adding `Submodules/` to the Arduino
-library search path. The main firmware includes it directly from
-`RC_FlightController.ino` or from another support module.
+## Why These Data Types
 
-The flight controller runs a 400 Hz control loop on ESP32, so this library
-should avoid heap allocation, long blocking calls, and unbounded Serial output
-inside flight-critical paths. Debug output should use `DebugConfig.h` macros
-where available so `VERBOSE_ON=0` builds can compile prints out.
-
-## Data Type Choices
-
-- `double` latitude/longitude: Coordinates need more decimal precision than most telemetry floats.
-- `float` speed/altitude/course: These engineering values do not need double precision and are cheaper to process.
-- `uint8_t` satellites/fix quality/time fields: These values are small and map naturally to NMEA fields.
-- `char` sentence buffers: NMEA parsing is line-oriented and bounded, avoiding dynamic String churn.
-
-## Usage Guidance
-
-1. Initialize hardware-facing classes once during `setup()`.
-2. Keep update/read calls deterministic when used from a FreeRTOS task.
-3. Prefer explicit validity flags over sentinel numeric values.
-4. Keep units visible in field names, such as `_dps`, `_g`, `_uT`, `_m`, or `_us`.
-5. When adding telemetry fields, update both the packet struct and JSON serializer.
-
-## Example Build Integration
-
-```bash
-arduino-cli compile \
-  --fqbn esp32:esp32:esp32:UploadSpeed=921600,CPUFreq=240,FlashFreq=80,FlashMode=qio,FlashSize=4M,PartitionScheme=min_spiffs,DebugLevel=none,PSRAM=disabled,LoopCore=1,EventsCore=1,EraseFlash=none,JTAGAdapter=default,ZigbeeMode=default \
-  --libraries ./Submodules \
-  .
-```
-
-For quiet flight builds:
-
-```bash
-arduino-cli compile ... --build-property compiler.cpp.extra_flags=-DVERBOSE_ON=0
-```
-
-
-## Integration Notes
-
-In the main flight-controller sketch, this library is included through Arduino's
-library search path. When this folder is converted to a git submodule, keep the
-folder name stable under `Submodules/` so includes such as `#include "..."`
-continue to resolve.
-
-Most examples below are intentionally small. On the real flight controller,
-objects are usually constructed globally, initialized once from `setup()`, and
-then called from FreeRTOS tasks at deterministic rates.
-
+Latitude and longitude are stored as `double` because small decimal-degree differences matter for position. Altitude, speed, and course use `float` because their sensor precision is lower. Small counters such as satellites and time fields use `uint8_t` to make their range explicit.
