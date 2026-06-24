@@ -1,3 +1,10 @@
+/*
+ * Name: GPSSensor.h
+ * Use: Declaration for the GPS NMEA parser and thread-safe GPS data access.
+ * Version: 4.0.0
+ * Created by: Durvesh Pathak dp676@cornell.edu
+ */
+
 /**
  * ============================================================
  *  GPSSensor.h — GY-GPS6MV2 (u-blox NEO-6M) NMEA Parser
