@@ -1,5 +1,9 @@
 # Test Quad GPS Library
 
+## Explain It Simply
+
+This module reads messages from the GPS. It tells the drone where it is on Earth, how fast it is moving, and how many satellites it can see.
+
 `GPSSensor` parses NMEA sentences from a GY-GPS6MV2/u-blox NEO-6M style module over UART1.
 
 ## Pin Map
